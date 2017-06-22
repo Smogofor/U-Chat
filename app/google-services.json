@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "3301363161",
+    "firebase_url": "https://u-chat-df0a4.firebaseio.com",
+    "project_id": "u-chat-df0a4",
+    "storage_bucket": "u-chat-df0a4.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:3301363161:android:e9903fd939ca0793",
+        "android_client_info": {
+          "package_name": "br.com.smogofor.u_chat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "3301363161-m6oml9v82muncft3qrsfhal0r4dp67mc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCemNglydmBs82pl9Ps_vc6WEbYeomfqZI"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
