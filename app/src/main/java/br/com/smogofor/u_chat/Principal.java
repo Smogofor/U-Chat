@@ -6,6 +6,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
+import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -17,7 +18,17 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.TextView;
+
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.storage.FirebaseStorage;
 
 import java.util.ArrayList;
 
@@ -27,6 +38,34 @@ public class Principal extends AppCompatActivity {
     private ArrayAdapter<String> adapterMenuEsquerda;
     private ListView menuEsquerda;
     private AdapterView.OnItemClickListener listener;
+    private FirebaseApp app;
+    private FirebaseDatabase database;
+    private FirebaseAuth auth;
+
+    private DatabaseReference databaseRef;
+
+    private View loginBtn;
+    private View logoutBtn;
+
+    private TextView usernameTxt;
+
+    private String username;
+
+    private void setUsername(String username) {
+        if (username == null) {
+            username = "Anônimo";
+        }
+        boolean isLoggedIn = !username.equals("Anônimo");
+        auth.signInAnonymously();
+        this.username = username;
+        this.logoutBtn = findViewById(R.id.logoutBtn);
+        this.loginBtn = findViewById(R.id.loginBtn);
+        MontarHeader();
+//        this.logoutBtn.setVisibility(isLoggedIn ? View.VISIBLE : View.GONE);
+//        this.loginBtn .setVisibility(isLoggedIn ? View.GONE    : View.VISIBLE);
+    }
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,13 +74,44 @@ public class Principal extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        // Get the Firebase app and all primitives we'll use
+        app = FirebaseApp.getInstance();
+        database = FirebaseDatabase.getInstance(app);
+        auth = FirebaseAuth.getInstance(app);
+
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
 
+        // When the user has entered credentials in the login dialog
+        LoginDialog.onCredentials(new OnSuccessListener<LoginDialog.EmailPasswordResult>() {
+            public void onSuccess(LoginDialog.EmailPasswordResult result) {
+                // Sign the user in with the email address and password they entered
+                auth.createUserWithEmailAndPassword(result.email, result.password);
+                //auth.signInWithEmailAndPassword(result.email, result.password);
+            }
+        });
+
+        // When the user signs in or out, update the username we keep for them
+        auth.addAuthStateListener(new FirebaseAuth.AuthStateListener() {
+            public void onAuthStateChanged(FirebaseAuth firebaseAuth) {
+                if (firebaseAuth.getCurrentUser() != null) {
+                    // User signed in, set their email address as the user name
+                    setUsername(firebaseAuth.getCurrentUser().getEmail());
+                }
+                else {
+                    // User signed out, set a default username
+                    setUsername("Anônimo");
+
+                }
+
+            }
+        });
+
         MontarMenuEsquerda();
+        setUsername("Android");
     }
 
     @Override
@@ -75,7 +145,12 @@ public class Principal extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.loginBtn) {
+            LoginDialog.showLoginPrompt(Principal.this, app);
+            return true;
+        }
+        if (id == R.id.logoutBtn) {
+            auth.signOut();
             return true;
         }
 
@@ -95,6 +170,17 @@ public class Principal extends AppCompatActivity {
     //Ao selecionar sala possuíra um padrão
     public void MontarMenuEsquerda(){
         //NavigationView navigationView = (NavigationView) findViewById(R.id.nav_menu_esquerda);
+
+
+
+        if(!auth.getCurrentUser().isAnonymous()){
+            //String token = auth.getCurrentUser().getIdToken(true).getResult().getToken();
+            //databaseRef = database.getReference();
+            //databaseRef = databaseRef.child("Usuarios");
+            //databaseRef = databaseRef.child(token);
+        }
+        databaseRef = database.getReference("Salas");
+
         itensMenuEsquerda = new String[]{"Administrar","Sala 1", "Sala 2", "Sala 3"};
         menuEsquerda = (ListView) findViewById(R.id.lst_menu_items_esquerda);
         adapterMenuEsquerda = new ArrayAdapter(this,android.R.layout.simple_list_item_1,itensMenuEsquerda);
@@ -124,7 +210,18 @@ public class Principal extends AppCompatActivity {
         };
 
         menuEsquerda.setOnItemClickListener(listener);
-//        menuEsquerda.requestFocus();
-//        menuEsquerda.bringToFront();
+    }
+
+    public void MontarHeader(){
+        //busca dados do usuario logado
+        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_menu_esquerda);
+        FirebaseUser user = auth.getCurrentUser();
+        if(user != null && !user.isAnonymous()){
+            ((ImageView)findViewById(R.id.imv_foto)).setImageURI(user.getPhotoUrl());
+            ((TextView)findViewById(R.id.txt_usuario)).setText(user.getDisplayName());
+            ((TextView)findViewById(R.id.txt_email)).setText(user.getEmail());
+        }else{
+            ((TextView)findViewById(R.id.txt_usuario)).setText("Anônimo");
+        }
     }
 }

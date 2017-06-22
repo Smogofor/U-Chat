@@ -42,8 +42,6 @@ public class TelaPrincipal extends Fragment {
     private ChatMessageAdapter adapter;
     private ImageButton imageBtn;
     private TextView usernameTxt;
-    private View loginBtn;
-    private View logoutBtn;
 
     private FirebaseApp app;
     private FirebaseDatabase database;
@@ -54,18 +52,6 @@ public class TelaPrincipal extends Fragment {
     private StorageReference storageRef;
 
     private String username;
-
-    private void setUsername(String username) {
-        Log.d(TAG, "setUsername("+String.valueOf(username)+")");
-        if (username == null) {
-            username = "Android";
-        }
-        boolean isLoggedIn = !username.equals("Android");
-        this.username = username;
-        this.usernameTxt.setText(username);
-        this.logoutBtn.setVisibility(isLoggedIn ? View.VISIBLE : View.GONE);
-        this.loginBtn .setVisibility(isLoggedIn ? View.GONE    : View.VISIBLE);
-    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -81,10 +67,6 @@ public class TelaPrincipal extends Fragment {
         messageTxt = (EditText) v.findViewById(R.id.messageTxt);
         messagesList = (RecyclerView) v.findViewById(R.id.messagesList);
         imageBtn = (ImageButton) v.findViewById(R.id.imageBtn);
-        loginBtn = v.findViewById(R.id.loginBtn);
-        logoutBtn = v.findViewById(R.id.logoutBtn);
-        usernameTxt = (TextView) v.findViewById(R.id.usernameTxt);
-        setUsername("Android");
 
         LinearLayoutManager layoutManager = new LinearLayoutManager(this.getActivity());
         messagesList.setHasFixedSize(false);
@@ -97,18 +79,6 @@ public class TelaPrincipal extends Fragment {
                 intent.setType("image/jpeg");
                 intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
                 startActivityForResult(Intent.createChooser(intent, "Completar a ação usando"), RC_PHOTO_PICKER);
-            }
-        });
-        // Show a popup when the user asks to sign in
-        loginBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                LoginDialog.showLoginPrompt(TelaPrincipal.this.getActivity(), app);
-            }
-        });
-        // Allow the user to sign out
-        logoutBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                auth.signOut();
             }
         });
 
@@ -126,11 +96,20 @@ public class TelaPrincipal extends Fragment {
         auth = FirebaseAuth.getInstance(app);
         storage = FirebaseStorage.getInstance(app);
 
+
+
         // Get a reference to our chat "room" in the database
         databaseRef = database.getReference(getArguments().getString("Reference"));
 
         sendBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                if(auth.getCurrentUser().isAnonymous())
+                    username = "Anônimo";
+                else {
+                    username = auth.getCurrentUser().getDisplayName();
+                    if (username == null || username.isEmpty())
+                        username = auth.getCurrentUser().getEmail();
+                }
                 ChatMessage chat = new ChatMessage(username, messageTxt.getText().toString());
                 // Push the chat message to the database
                 databaseRef.push().setValue(chat);
@@ -149,29 +128,6 @@ public class TelaPrincipal extends Fragment {
             public void onChildRemoved(DataSnapshot dataSnapshot) { }
             public void onChildMoved(DataSnapshot dataSnapshot, String s) { }
             public void onCancelled(DatabaseError databaseError) { }
-        });
-
-        // When the user has entered credentials in the login dialog
-        LoginDialog.onCredentials(new OnSuccessListener<LoginDialog.EmailPasswordResult>() {
-            public void onSuccess(LoginDialog.EmailPasswordResult result) {
-                // Sign the user in with the email address and password they entered
-                auth.createUserWithEmailAndPassword(result.email, result.password);
-                //auth.signInWithEmailAndPassword(result.email, result.password);
-            }
-        });
-
-        // When the user signs in or out, update the username we keep for them
-        auth.addAuthStateListener(new FirebaseAuth.AuthStateListener() {
-            public void onAuthStateChanged(FirebaseAuth firebaseAuth) {
-                if (firebaseAuth.getCurrentUser() != null) {
-                    // User signed in, set their email address as the user name
-                    setUsername(firebaseAuth.getCurrentUser().getEmail());
-                }
-                else {
-                    // User signed out, set a default username
-                    setUsername("Android");
-                }
-            }
         });
 
         return v;
